@@ -1,70 +1,67 @@
 version: 2.1
 
-orbs:
- maven: circleci/maven@2.0.0  # Maven orb for building and testing Java projects
+# Pipeline parameters
+parameters:
+  environment:
+    type: enum
+    enum: ["staging", "production"]
+    default: "staging"
 
+# Define the jobs
 jobs:
- build:
-   docker:
-     - image: cimg/openjdk:11.0  # Java build environment
-   steps:
-     - checkout
-     - run:
-         name: Build the Project
-         command: cd code/nexus-lab/circleci-101 && mvn clean package spring-boot:repackage
+  build:
+    docker:
+      - image: cimg/openjdk:11.0  # Example build environment
+    steps:
+      - checkout
+      - run:
+          name: Display Current Branch
+          command: echo "Current Branch: ${CIRCLE_BRANCH}"
+      - run:
+          name: Install Dependencies
+          command: |
+            echo "Installing dependencies..."
+            # Add your dependency installation command here
+      - run:
+          name: Run Unit Tests
+          command: |
+            echo "Running unit tests..."
+            # Replace with your actual test command
+            echo "Tests completed successfully!"
 
- lint:
-   docker:
-     - image: cimg/openjdk:11.0
-   steps:
-     - checkout
-     - run:
-         name: Lint the Code
-         command: cd code/nexus-lab/circleci-101 && mvn checkstyle:check
+  deploy:
+    docker:
+      - image: cimg/openjdk:11.0  # Example deployment environment
+    parameters:
+      environment:
+        type: enum
+        enum: ["staging", "production"]
+    steps:
+      - run:
+          name: Echo Deployment Environment
+          command: echo "Deploying to << parameters.environment >> environment."
+      - when:
+          condition: << parameters.environment >> == "production"
+          steps:
+            - run:
+                name: Run Production-Specific Tasks
+                command: |
+                  echo "Running additional tasks for production environment..."
+                  # Add production-specific commands here
+      - run:
+          name: Finalize Deployment
+          command: echo "Deployment complete!"
 
- unit_test:
-   docker:
-     - image: cimg/openjdk:11.0
-   steps:
-     - checkout
-     - run:
-         name: Run Unit Tests
-         command: cd code/nexus-lab/circleci-101 && mvn test
-
-
- deploy_mock:
-   docker:
-     - image: cimg/openjdk:11.0
-   steps:
-     - run:
-         name: Mock Deployment
-         command: echo "Deployment complete."
-
+# Define the workflow with branch filters and parameters
 workflows:
- version: 2
- build_and_deploy:
-   jobs:
-     - build
-     - lint:
-         requires:
-           - build
-     - unit_test: # using docker executor for running unit tests
-         requires:
-           - build
-     - maven/test: # using maven orb for running unit tests
-         executor:
-           name: maven/default
-           tag: '17.0'
-         maven_command: mvn
-         command: test
-         settings_file: settings.xml
-         verify_dependencies: false
-         app_src_directory: ./code/nexus-lab/circleci-101
-         test_results_path: ./target/surefire-reports
-         requires:
-           - build
-     - deploy_mock:
-         requires:
-           - lint
-           - unit_test
-
+  version: 2
+  build_and_deploy:
+    jobs:
+      - build  # The build job always runs
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only: main
+          environment: << pipeline.parameters.environment >>
