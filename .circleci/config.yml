@@ -15,9 +15,6 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Display Current Branch
-          command: echo "Current Branch: ${CIRCLE_BRANCH}"
-      - run:
           name: Install Dependencies
           command: |
             echo "Installing dependencies..."
